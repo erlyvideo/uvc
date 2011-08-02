@@ -1,0 +1,12 @@
+{application, uvc4erl,
+ [
+  {description, ""},
+  {vsn, "1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {mod, { uvc4erl_sup, []}},
+  {env, []}
+ ]}.
