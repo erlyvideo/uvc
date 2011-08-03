@@ -13,6 +13,7 @@
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <linux/videodev2.h>
+#include <libswscale/swscale.h>
 
 #define V4L_BUFFERS_DEFAULT	8
 
@@ -42,6 +43,9 @@ typedef struct {
   struct buffer *buffers;
   int nbufs;
   unsigned int pixelformat;
+  int width;
+  int height;
+  struct SwsContext* scale_ctx;
 } Uvc;
 
 
@@ -129,6 +133,8 @@ static int uvc4erl_drv_command(ErlDrvData handle, unsigned int command, char *bu
     	} else {
         d->pixelformat = V4L2_PIX_FMT_YUYV;
     	}
+      d->width = cfg->width;
+      d->height = cfg->height;
     	fmt.fmt.pix.width = cfg->width;
     	fmt.fmt.pix.height = cfg->height;
     	fmt.fmt.pix.pixelformat = d->pixelformat;
@@ -374,22 +380,45 @@ static void uvc4erl_drv_input(ErlDrvData handle, ErlDrvEvent io_event)
     return;
 	}
 	
-  ErlDrvBinary* bin = driver_alloc_binary(buf.bytesused + 1024);
-  size_t len = add_huffman((uint8_t *)bin->orig_bytes, (uint8_t *)d->buffers[buf.index].mem, buf.bytesused);
+  ErlDrvBinary* bin;
+  size_t len;
+  if(d->pixelformat == V4L2_PIX_FMT_YUYV) {
+    len = d->width*d->height*3/2;
+    bin = driver_alloc_binary(len);
+    
+    if(!d->scale_ctx) d->scale_ctx = sws_getContext(
+      d->width, d->height, PIX_FMT_YUYV422, 
+      d->width, d->height, PIX_FMT_YUV420P, 
+      SWS_FAST_BILINEAR, NULL, NULL, NULL
+    );
+
+    int linesize[4] = {d->width*2, 0, 0, 0};
+    uint8_t *src[4] = {d->buffers[buf.index].mem, 0, 0, 0};
+
+    int stride_size = d->width*d->height;
+    uint8_t *plane[4] = {bin->orig_bytes, bin->orig_bytes+stride_size, bin->orig_bytes+stride_size+stride_size/4, NULL};
+    int stride[4] = {d->width, d->width/2, d->width/2, 0};
+    
+    sws_scale(d->scale_ctx, src, linesize, 0, d->height, plane, stride);
+  } else {
+    bin = driver_alloc_binary(buf.bytesused + 1024);
+    len = add_huffman((uint8_t *)bin->orig_bytes, (uint8_t *)d->buffers[buf.index].mem, buf.bytesused);
+  }
+  
   
   ErlDrvUInt64 pts = buf.timestamp.tv_sec * 1000 + buf.timestamp.tv_usec / 1000;
   
   ErlDrvTermData reply[] = {
     ERL_DRV_ATOM, driver_mk_atom("uvc4erl"),
     ERL_DRV_PORT, driver_mk_port(d->port),
-    ERL_DRV_ATOM, driver_mk_atom(d->pixelformat == V4L2_PIX_FMT_YUYV ? "yuyv" : "jpeg"),
+    ERL_DRV_ATOM, driver_mk_atom(d->pixelformat == V4L2_PIX_FMT_YUYV ? "yuv" : "jpeg"),
     ERL_DRV_UINT64, &pts,
     ERL_DRV_BINARY, (ErlDrvTermData)bin, (ErlDrvTermData)len, 0,
     ERL_DRV_TUPLE, 5
   };
 
 
-  fprintf(stderr, "Event in uvc: %lu %u %u\r\n", len, (unsigned)buf.timestamp.tv_sec, (unsigned)buf.timestamp.tv_usec);
+  // fprintf(stderr, "Event in uvc: %lu %u %u\r\n", len, (unsigned)buf.timestamp.tv_sec, (unsigned)buf.timestamp.tv_usec);
   driver_output_term(d->port, reply, sizeof(reply) / sizeof(reply[0]));
   
   ret = video_queue_buffer(d, buf.index);
