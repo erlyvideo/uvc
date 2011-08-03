@@ -429,13 +429,6 @@ static void uvc4erl_drv_input(ErlDrvData handle, ErlDrvEvent io_event)
 }
 
 
-static void uvc4erl_inet_timeout(ErlDrvData handle)
-{
-  Uvc* d = (Uvc *)handle;
-  fprintf(stderr, "Timeout in socket\r\n");
-  uvc4erl_exit(d);
-}
-
 ErlDrvEntry uvc4erl_driver_entry = {
     NULL,			/* F_PTR init, N/A */
     uvc4erl_drv_start,		/* L_PTR start, called when port is opened */
@@ -447,7 +440,7 @@ ErlDrvEntry uvc4erl_driver_entry = {
     NULL,			/* F_PTR finish, called when unloaded */
     NULL,     /* void *handle */
     uvc4erl_drv_command,			/* F_PTR control, port_command callback */
-    uvc4erl_inet_timeout,			/* F_PTR timeout, reserved */
+    NULL,		    	/* F_PTR timeout, reserved */
     NULL,	                     /* F_PTR outputv, reserved */
     NULL,                      /* ready_async */
     NULL,                             /* flush */
