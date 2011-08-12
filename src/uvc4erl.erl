@@ -29,44 +29,43 @@
 -export([start_link/1, start_link/2]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
--export([subscribe/2]).
--export([unsubscribe/2]).
 
--export([open/1]).
+-export([open/1, capture/1]).
 
 -record(uvc4erl, {
   uvc,
-  clients
+  format,
+  consumer
 }).
 
 start_link(Name, Config) ->
   gen_server:start_link({local, Name}, ?MODULE, [Config], []).
 
+
+%%
+%% Valid options:
+%% device — Number of /dev/videoN
+%% size = {Width, Height} — capture size
+%% fps — FPS
+%% format — yuv/jpeg. If stream is sent with jpeg, you may ask to decode it
+%% consumer — pid of consumer
+%%
+
+capture(Options) ->
+  application:start(uvc4erl),
+  Device = proplists:get_value(device, Options),
+  uvc4erl_sup:start_uvc4erl({uvc,Device}, Options).
+
 start_link(Config) ->
   gen_server:start_link(?MODULE, [Config], []).
 
-subscribe(UVC, Socket) ->
-  gen_server:call(UVC, {subscribe, self(), Socket}).
-
-unsubscribe(UVC, Socket) ->
-  gen_server:call(UVC, {unsubscribe, self(), Socket}).
-
 init([Config]) ->
   {ok, UVC} = open(Config),
-  {ok, #uvc4erl{uvc = UVC, clients = []}}.
+  Format = proplists:get_value(format, Config, yuv),
+  Consumer = proplists:get_value(consumer, Config),
+  erlang:monitor(process, Consumer),
+  {ok, #uvc4erl{uvc = UVC, format = Format, consumer = Consumer}}.
 
-handle_call({subscribe, Pid, Port}, _From, #uvc4erl{clients = Clients} = State) ->
-  case lists:keyfind(Port, 2, Clients) of
-    {_, _} ->
-      {reply, {error, already_subscribe}, State};
-    false ->
-      Ref = erlang:monitor(process, Pid),
-      {reply, ok, State#uvc4erl{clients = [{Pid, Port}|Clients]}}
-  end;
-
-handle_call({unsubscribe, _Pid, Port}, _From, #uvc4erl{clients = Clients} = State) ->
-  Clients1 = lists:keydelete(Port, 2, Clients),
-  {reply, ok, State#uvc4erl{clients = Clients1}};
 
 handle_call(_Request, _From, State) ->
   {stop, {unknown_call, _Request}, State}.
@@ -74,22 +73,21 @@ handle_call(_Request, _From, State) ->
 handle_cast(_Msg, State) ->
   {stop, {unknown_cast, _Msg}, State}.
 
-handle_info({inet_reply,_Port,_Reply}, State) ->
+
+
+handle_info({uvc4erl, _UVC, Codec, PTS, RAW}, #uvc4erl{format = Format, consumer = Consumer} = State) ->
+  {Out, Codec1} = case Codec of
+    jpeg when Format == yuv -> {Y, _Width, _Height} = jpeg:decode_yuv(RAW), {Y, yuv};
+    _ -> {RAW, Codec}
+  end,
+  Consumer ! {uvc4erl, self(), Codec1, PTS, Out},
   {noreply, State};
 
-handle_info({uvc_ready, UVC}, #uvc4erl{uvc = UVC} = State) ->
-  {noreply, State};
+handle_info({'DOWN', _, process, _Client, _Reason}, State) ->
+  {stop, normal, State};
 
-handle_info({uvc, UVC, Bin}, #uvc4erl{uvc = UVC, clients = Clients} = State) ->
-  lists:foreach(fun
-    ({_Pid, Port}) when is_port(Port) -> (catch port_command(Port, Bin, [nosuspend]));
-    ({_Pid, Pid}) when is_pid(Pid) -> Pid ! {uvc, self(), Bin}
-  end, Clients),
-  {noreply, State};
-  
 handle_info(_Info, State) ->
-  ?D({unknown_msg, _Info}),
-  {noreply, State}.
+  {stop, {unknown_msg, _Info}, State}.
 
 terminate(_Reason, _State) ->
   ok.
@@ -99,8 +97,6 @@ code_change(_OldVsn, State, _Extra) ->
 
 
 -define(CMD_OPEN, 1).
--define(CMD_GET_PID, 2).
--define(CMD_START_INPUT, 3).
 
 
 open(Options) ->
