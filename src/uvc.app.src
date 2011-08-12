@@ -1,4 +1,4 @@
-{application, uvc4erl,
+{application, uvc,
  [
   {description, ""},
   {vsn, "1"},
@@ -7,6 +7,6 @@
                   kernel,
                   stdlib
                  ]},
-  {mod, { uvc4erl_sup, []}},
+  {mod, { uvc_sup, []}},
   {env, []}
  ]}.

@@ -51,7 +51,7 @@ typedef struct {
 
 
 
-static ErlDrvData uvc4erl_drv_start(ErlDrvPort port, char *buff)
+static ErlDrvData uvc_drv_start(ErlDrvPort port, char *buff)
 {
     Uvc* d = (Uvc *)driver_alloc(sizeof(Uvc));
     bzero(d, sizeof(Uvc));
@@ -63,7 +63,7 @@ static ErlDrvData uvc4erl_drv_start(ErlDrvPort port, char *buff)
 }
 
 
-static void uvc4erl_drv_stop(ErlDrvData handle)
+static void uvc_drv_stop(ErlDrvData handle)
 {
   Uvc* d = (Uvc *)handle;
   driver_select(d->port, (ErlDrvEvent)(d->fd), DO_READ|DO_WRITE, 0);
@@ -72,11 +72,11 @@ static void uvc4erl_drv_stop(ErlDrvData handle)
 }
 
 
-static void uvc4erl_exit(Uvc *d)
+static void uvc_exit(Uvc *d)
 {
   driver_select(d->port, (ErlDrvEvent)d->fd, DO_READ|DO_WRITE, 0);
   ErlDrvTermData reply[] = {
-    ERL_DRV_ATOM, driver_mk_atom("uvc4erl_closed"),
+    ERL_DRV_ATOM, driver_mk_atom("uvc_closed"),
     ERL_DRV_PORT, driver_mk_port(d->port),
     ERL_DRV_TUPLE, 2
   };
@@ -86,7 +86,7 @@ static void uvc4erl_exit(Uvc *d)
 
 static int video_alloc_buffers(Uvc *dev);
 
-static int uvc4erl_drv_command(ErlDrvData handle, unsigned int command, char *buf, 
+static int uvc_drv_command(ErlDrvData handle, unsigned int command, char *buf, 
                    int len, char **rbuf, int rlen) {
   Uvc* d = (Uvc*) handle;
   
@@ -366,7 +366,7 @@ size_t add_huffman(uint8_t *dst, uint8_t *src, size_t size) {
   return len;
 }
 
-static void uvc4erl_drv_input(ErlDrvData handle, ErlDrvEvent io_event)
+static void uvc_drv_input(ErlDrvData handle, ErlDrvEvent io_event)
 {
   Uvc* d = (Uvc*) handle;
   struct v4l2_buffer buf;
@@ -409,7 +409,7 @@ static void uvc4erl_drv_input(ErlDrvData handle, ErlDrvEvent io_event)
   ErlDrvUInt64 pts = buf.timestamp.tv_sec * 1000 + buf.timestamp.tv_usec / 1000;
   
   ErlDrvTermData reply[] = {
-    ERL_DRV_ATOM, driver_mk_atom("uvc4erl"),
+    ERL_DRV_ATOM, driver_mk_atom("uvc"),
     ERL_DRV_PORT, driver_mk_port(d->port),
     ERL_DRV_ATOM, driver_mk_atom(d->pixelformat == V4L2_PIX_FMT_YUYV ? "yuv" : "jpeg"),
     ERL_DRV_UINT64, &pts,
@@ -429,17 +429,17 @@ static void uvc4erl_drv_input(ErlDrvData handle, ErlDrvEvent io_event)
 }
 
 
-ErlDrvEntry uvc4erl_driver_entry = {
+ErlDrvEntry uvc_driver_entry = {
     NULL,			/* F_PTR init, N/A */
-    uvc4erl_drv_start,		/* L_PTR start, called when port is opened */
-    uvc4erl_drv_stop,		/* F_PTR stop, called when port is closed */
+    uvc_drv_start,		/* L_PTR start, called when port is opened */
+    uvc_drv_stop,		/* F_PTR stop, called when port is closed */
     NULL,	                /* F_PTR output, called when erlang has sent */
-    uvc4erl_drv_input,		/* F_PTR ready_input, called when input descriptor ready */
+    uvc_drv_input,		/* F_PTR ready_input, called when input descriptor ready */
     NULL,	              /* F_PTR ready_output, called when output descriptor ready */
-    "uvc4erl_drv",		/* char *driver_name, the argument to open_port */
+    "uvc_drv",		/* char *driver_name, the argument to open_port */
     NULL,			/* F_PTR finish, called when unloaded */
     NULL,     /* void *handle */
-    uvc4erl_drv_command,			/* F_PTR control, port_command callback */
+    uvc_drv_command,			/* F_PTR control, port_command callback */
     NULL,		    	/* F_PTR timeout, reserved */
     NULL,	                     /* F_PTR outputv, reserved */
     NULL,                      /* ready_async */
@@ -454,7 +454,7 @@ ErlDrvEntry uvc4erl_driver_entry = {
     NULL,     /* process_exit */
     NULL      /* stop_select */
 };
-DRIVER_INIT(uvc4erl_drv) /* must match name in driver_entry */
+DRIVER_INIT(uvc_drv) /* must match name in driver_entry */
 {
-    return &uvc4erl_driver_entry;
+    return &uvc_driver_entry;
 }

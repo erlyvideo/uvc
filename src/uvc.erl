@@ -20,7 +20,7 @@
 %%% along with erlyvideo.  If not, see <http://www.gnu.org/licenses/>.
 %%%
 %%%---------------------------------------------------------------------------------------
--module(uvc4erl).
+-module(uvc).
 -author('Max Lapshin <max@maxidoors.ru>').
 -include("log.hrl").
 -behaviour(gen_server).
@@ -32,7 +32,7 @@
 
 -export([open/1, capture/1]).
 
--record(uvc4erl, {
+-record(uvc, {
   uvc,
   format,
   consumer
@@ -40,6 +40,9 @@
 
 start_link(Name, Config) ->
   gen_server:start_link({local, Name}, ?MODULE, [Config], []).
+
+start_link(Config) ->
+  gen_server:start_link(?MODULE, [Config], []).
 
 
 %%
@@ -52,19 +55,16 @@ start_link(Name, Config) ->
 %%
 
 capture(Options) ->
-  application:start(uvc4erl),
-  Device = proplists:get_value(device, Options),
-  uvc4erl_sup:start_uvc4erl({uvc,Device}, Options).
+  application:start(uvc),
+  uvc_sup:start_uvc(Options).
 
-start_link(Config) ->
-  gen_server:start_link(?MODULE, [Config], []).
 
 init([Config]) ->
   {ok, UVC} = open(Config),
   Format = proplists:get_value(format, Config, yuv),
   Consumer = proplists:get_value(consumer, Config),
   erlang:monitor(process, Consumer),
-  {ok, #uvc4erl{uvc = UVC, format = Format, consumer = Consumer}}.
+  {ok, #uvc{uvc = UVC, format = Format, consumer = Consumer}}.
 
 
 handle_call(_Request, _From, State) ->
@@ -75,12 +75,12 @@ handle_cast(_Msg, State) ->
 
 
 
-handle_info({uvc4erl, _UVC, Codec, PTS, RAW}, #uvc4erl{format = Format, consumer = Consumer} = State) ->
+handle_info({uvc, _UVC, Codec, PTS, RAW}, #uvc{format = Format, consumer = Consumer} = State) ->
   {Out, Codec1} = case Codec of
     jpeg when Format == yuv -> {Y, _Width, _Height} = jpeg:decode_yuv(RAW), {Y, yuv};
     _ -> {RAW, Codec}
   end,
-  Consumer ! {uvc4erl, self(), Codec1, PTS, Out},
+  Consumer ! {uvc, self(), Codec1, PTS, Out},
   {noreply, State};
 
 handle_info({'DOWN', _, process, _Client, _Reason}, State) ->
@@ -101,17 +101,17 @@ code_change(_OldVsn, State, _Extra) ->
 
 open(Options) ->
   ?D({load, Options}),
-  Path = case code:lib_dir(uvc4erl,priv) of
+  Path = case code:lib_dir(uvc,priv) of
     {error, _} -> "priv";
     Else -> Else
   end,
-  case erl_ddll:load_driver(Path, uvc4erl_drv) of
+  case erl_ddll:load_driver(Path, uvc_drv) of
   	ok -> ok;
   	{error, already_loaded} -> ok;
   	{error, Error} -> exit({error, {could_not_load_driver,erl_ddll:format_error(Error)}})
   end,
   ?D({open, Options}),
-  UVC = open_port({spawn, uvc4erl_drv}, [binary]),
+  UVC = open_port({spawn, uvc_drv}, [binary]),
   ?D({configure, Options}),
   
   Device = proplists:get_value(device, Options, 0),

@@ -5,6 +5,7 @@ all: compile
 
 compile:
 	rm -f ._rebar.config
+	rm -f src/._*
 	rebar compile
 
 packages: compile
