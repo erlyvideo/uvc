@@ -93,7 +93,6 @@ static int uvc_drv_command(ErlDrvData handle, unsigned int command, char *buf,
   switch(command) {
     case CMD_OPEN: {
       
-      fprintf(stderr, "Opening\r\n");
       if(len != sizeof(Config)) {
         driver_failure_atom(d->port, "invalid_config");
         return 0;
@@ -107,7 +106,6 @@ static int uvc_drv_command(ErlDrvData handle, unsigned int command, char *buf,
         return 0;
       }
 
-      fprintf(stderr, "Opened device %s\r\n", device_path);
 
     	struct v4l2_capability cap;
     	memset(&cap, 0, sizeof cap);
@@ -180,15 +178,11 @@ static int uvc_drv_command(ErlDrvData handle, unsigned int command, char *buf,
       }
     	
     	
-      fprintf(stderr, "Capture ready, prepare start \r\n");
-    	
     	if(video_alloc_buffers(d) < 0) {
         driver_failure_posix(d->port, errno);
         return 0;
     	}
     	
-      fprintf(stderr, "Allocated buffers\r\n");
-
       int type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     	ret = ioctl(d->fd, VIDIOC_STREAMON, &type);
     	if(ret < 0) {
@@ -254,8 +248,6 @@ static int video_alloc_buffers(Uvc *dev)
 		return ret;
 	}
 	
-  fprintf(stderr, "Allocating %d buffers\r\n", rb.count);
-
 	buffers = malloc(rb.count * sizeof buffers[0]);
 	if (buffers == NULL)
 		return -ENOMEM;
@@ -271,7 +263,7 @@ static int video_alloc_buffers(Uvc *dev)
 			fprintf(stderr, "Unable to query buffer %u (%d).\r\n", i, errno);
 			return ret;
 		}
-		printf("length: %u offset: %u\n", buf.length, buf.m.offset);
+		//printf("length: %u offset: %u\n", buf.length, buf.m.offset);
 
 		buffers[i].mem = mmap(0, buf.length, PROT_READ | PROT_WRITE, MAP_SHARED, dev->fd, buf.m.offset);
 		if (buffers[i].mem == MAP_FAILED) {
@@ -279,7 +271,7 @@ static int video_alloc_buffers(Uvc *dev)
 			return -1;
 		}
 		buffers[i].size = buf.length;
-		printf("Buffer %u mapped at address %p.\n", i, buffers[i].mem);
+		//printf("Buffer %u mapped at address %p.\n", i, buffers[i].mem);
 	}
 	dev->buffers = buffers;
 	dev->nbufs = rb.count;

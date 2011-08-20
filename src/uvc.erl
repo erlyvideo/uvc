@@ -100,7 +100,7 @@ code_change(_OldVsn, State, _Extra) ->
 
 
 open(Options) ->
-  ?D({load, Options}),
+  %?D({load, Options}),
   Path = case code:lib_dir(uvc,priv) of
     {error, _} -> "priv";
     Else -> Else
@@ -110,9 +110,9 @@ open(Options) ->
   	{error, already_loaded} -> ok;
   	{error, Error} -> exit({error, {could_not_load_driver,erl_ddll:format_error(Error)}})
   end,
-  ?D({open, Options}),
+  %?D({open, Options}),
   UVC = open_port({spawn, uvc_drv}, [binary]),
-  ?D({configure, Options}),
+  %?D({configure, Options}),
   
   Device = proplists:get_value(device, Options, 0),
   {Width,Height} = proplists:get_value(size, Options, {640,360}),
