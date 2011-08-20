@@ -253,6 +253,8 @@ static int video_alloc_buffers(Uvc *dev)
     fprintf(stderr, "Failed request buffer\r\n");
 		return ret;
 	}
+	
+  fprintf(stderr, "Allocating %d buffers\r\n", rb.count);
 
 	buffers = malloc(rb.count * sizeof buffers[0]);
 	if (buffers == NULL)
@@ -420,12 +422,13 @@ static void uvc_drv_input(ErlDrvData handle, ErlDrvEvent io_event)
 
   // fprintf(stderr, "Event in uvc: %lu %u %u\r\n", len, (unsigned)buf.timestamp.tv_sec, (unsigned)buf.timestamp.tv_usec);
   driver_output_term(d->port, reply, sizeof(reply) / sizeof(reply[0]));
+  driver_free_binary(bin);
   
   ret = video_queue_buffer(d, buf.index);
-	if(ret < 0) {
-    driver_failure_posix(d->port, errno);
-    return;
-	}
+  if(ret < 0) {
+      driver_failure_posix(d->port, errno);
+      return;
+  }
 }
 
 
