@@ -30,7 +30,7 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
 
--export([open/1, capture/1]).
+-export([open/1, capture/1, stop/1]).
 
 -record(uvc, {
   uvc,
@@ -59,6 +59,9 @@ capture(Options) ->
   uvc_sup:start_uvc(Options).
 
 
+stop(Capture) ->
+  Capture ! stop.
+
 init([Config]) ->
   {ok, UVC} = open(Config),
   Format = proplists:get_value(format, Config, yuv),
@@ -84,6 +87,9 @@ handle_info({uvc, _UVC, Codec, PTS, RAW}, #uvc{format = Format, consumer = Consu
   {noreply, State};
 
 handle_info({'DOWN', _, process, _Client, _Reason}, State) ->
+  {stop, normal, State};
+
+handle_info(stop, State) ->
   {stop, normal, State};
 
 handle_info(_Info, State) ->

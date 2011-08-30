@@ -34,7 +34,7 @@ typedef struct {
   uint16_t height;
   uint8_t fps;
 } Config;
-#pragma options align=reset
+// #pragma options align=reset
 
 typedef struct {
   ErlDrvPort port;
@@ -66,23 +66,41 @@ static ErlDrvData uvc_drv_start(ErlDrvPort port, char *buff)
 static void uvc_drv_stop(ErlDrvData handle)
 {
   Uvc* d = (Uvc *)handle;
-  driver_select(d->port, (ErlDrvEvent)(d->fd), DO_READ|DO_WRITE, 0);
+  driver_select(d->port, (ErlDrvEvent)d->fd, DO_READ|DO_WRITE, 0);
+  
+  int type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	ioctl(d->fd, VIDIOC_STREAMOFF, &type);
+  
+  
+  int i;
+  for(i = 0; i < d->nbufs; i++) {
+    munmap(d->buffers[i].mem, d->buffers[i].size);
+  }
+  
+  struct v4l2_requestbuffers rb;
+  memset(&rb, 0, sizeof rb);
+  rb.count = 0;
+  rb.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+  rb.memory = V4L2_MEMORY_MMAP;
+  ioctl(d->fd, VIDIOC_REQBUFS, &rb);
+  free(d->buffers);
+  
   close(d->fd);
   driver_free((char*)handle);
 }
 
 
-static void uvc_exit(Uvc *d)
-{
-  driver_select(d->port, (ErlDrvEvent)d->fd, DO_READ|DO_WRITE, 0);
-  ErlDrvTermData reply[] = {
-    ERL_DRV_ATOM, driver_mk_atom("uvc_closed"),
-    ERL_DRV_PORT, driver_mk_port(d->port),
-    ERL_DRV_TUPLE, 2
-  };
-  driver_output_term(d->port, reply, sizeof(reply) / sizeof(reply[0]));
-  driver_exit(d->port, 0);
-}
+// static void uvc_exit(Uvc *d)
+// {
+//   driver_select(d->port, (ErlDrvEvent)d->fd, DO_READ|DO_WRITE, 0);
+//   ErlDrvTermData reply[] = {
+//     ERL_DRV_ATOM, driver_mk_atom("uvc_closed"),
+//     ERL_DRV_PORT, driver_mk_port(d->port),
+//     ERL_DRV_TUPLE, 2
+//   };
+//   driver_output_term(d->port, reply, sizeof(reply) / sizeof(reply[0]));
+//   driver_exit(d->port, 0);
+// }
 
 static int video_alloc_buffers(Uvc *dev);
 
@@ -387,13 +405,13 @@ static void uvc_drv_input(ErlDrvData handle, ErlDrvEvent io_event)
     );
 
     int linesize[4] = {d->width*2, 0, 0, 0};
-    uint8_t *src[4] = {d->buffers[buf.index].mem, 0, 0, 0};
+    uint8_t *src[4] = {(uint8_t *)d->buffers[buf.index].mem, 0, 0, 0};
 
     int stride_size = d->width*d->height;
-    uint8_t *plane[4] = {bin->orig_bytes, bin->orig_bytes+stride_size, bin->orig_bytes+stride_size+stride_size/4, NULL};
+    uint8_t *plane[4] = {(uint8_t *)bin->orig_bytes, (uint8_t *)bin->orig_bytes+stride_size, (uint8_t *)bin->orig_bytes+stride_size+stride_size/4, NULL};
     int stride[4] = {d->width, d->width/2, d->width/2, 0};
     
-    sws_scale(d->scale_ctx, src, linesize, 0, d->height, plane, stride);
+    sws_scale(d->scale_ctx, (const uint8_t * const*)src, linesize, 0, d->height, plane, stride);
   } else {
     bin = driver_alloc_binary(buf.bytesused + 1024);
     len = add_huffman((uint8_t *)bin->orig_bytes, (uint8_t *)d->buffers[buf.index].mem, buf.bytesused);
