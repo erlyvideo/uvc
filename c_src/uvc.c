@@ -461,7 +461,7 @@ ErlDrvEntry uvc_driver_entry = {
     NULL,                             /* event */
     ERL_DRV_EXTENDED_MARKER,          /* ERL_DRV_EXTENDED_MARKER */
     ERL_DRV_EXTENDED_MAJOR_VERSION,   /* ERL_DRV_EXTENDED_MAJOR_VERSION */
-    ERL_DRV_EXTENDED_MAJOR_VERSION,   /* ERL_DRV_EXTENDED_MINOR_VERSION */
+    ERL_DRV_EXTENDED_MINOR_VERSION,   /* ERL_DRV_EXTENDED_MINOR_VERSION */
     ERL_DRV_FLAG_USE_PORT_LOCKING,     /* ERL_DRV_FLAGs */
     NULL,     /* void *handle2 */
     NULL,     /* process_exit */
