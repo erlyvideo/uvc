@@ -35,7 +35,8 @@
 -record(uvc, {
   uvc,
   format,
-  consumer
+  consumer,
+  config
 }).
 
 start_link(Name, Config) ->
@@ -63,11 +64,11 @@ stop(Capture) ->
   Capture ! stop.
 
 init([Config]) ->
-  {ok, UVC} = open(Config),
   Format = proplists:get_value(format, Config, yuv),
   Consumer = proplists:get_value(consumer, Config),
   erlang:monitor(process, Consumer),
-  {ok, #uvc{uvc = UVC, format = Format, consumer = Consumer}}.
+  self() ! init,
+  {ok, #uvc{format = Format, consumer = Consumer, config = Config}}.
 
 
 handle_call(_Request, _From, State) ->
@@ -76,7 +77,9 @@ handle_call(_Request, _From, State) ->
 handle_cast(_Msg, State) ->
   {stop, {unknown_cast, _Msg}, State}.
 
-
+handle_info(init, #uvc{config = Config} = State) ->
+  {ok, UVC} = open(Config),
+  {noreply, State#uvc{uvc = UVC}};
 
 handle_info({uvc, _UVC, Codec, PTS, RAW}, #uvc{format = Format, consumer = Consumer} = State) ->
   {Out, Codec1} = case Codec of
