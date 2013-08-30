@@ -15,7 +15,7 @@
 #include <linux/videodev2.h>
 #include <libswscale/swscale.h>
 
-#define V4L_BUFFERS_DEFAULT	8
+#define V4L_BUFFERS_DEFAULT  8
 
 enum {
   CMD_OPEN = 1
@@ -23,8 +23,8 @@ enum {
 
 struct buffer
 {
-	unsigned int size;
-	void *mem;
+  unsigned int size;
+  void *mem;
 };
 
 #pragma pack(1)
@@ -69,7 +69,7 @@ static void uvc_drv_stop(ErlDrvData handle)
   driver_select(d->port, (ErlDrvEvent)d->fd, DO_READ|DO_WRITE, 0);
   
   int type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-	ioctl(d->fd, VIDIOC_STREAMOFF, &type);
+  ioctl(d->fd, VIDIOC_STREAMOFF, &type);
   
   
   int i;
@@ -125,64 +125,64 @@ static int uvc_drv_command(ErlDrvData handle, unsigned int command, char *buf,
       }
 
 
-    	struct v4l2_capability cap;
-    	memset(&cap, 0, sizeof cap);
+      struct v4l2_capability cap;
+      memset(&cap, 0, sizeof cap);
       int ret;
-    	ret = ioctl(d->fd, VIDIOC_QUERYCAP, &cap);
-    	if (ret < 0) {
+      ret = ioctl(d->fd, VIDIOC_QUERYCAP, &cap);
+      if (ret < 0) {
         driver_failure_posix(d->port, errno);
-    		return 0;
-    	}
+        return 0;
+      }
        
       if(!(cap.capabilities & V4L2_CAP_VIDEO_CAPTURE)) {
         driver_failure_atom(d->port, "not_a_capture_device");
         return 0;
       }
 
-      fprintf(stderr, "Setting size %dx%d\r\n", cfg->width, cfg->height);
+      //fprintf(stderr, "Setting size %dx%d\r\n", cfg->width, cfg->height);
       
       struct v4l2_format fmt;
-    	memset(&fmt, 0, sizeof fmt);
-    	fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    	if(cfg->width > 640 || cfg->height > 480) {
+      memset(&fmt, 0, sizeof fmt);
+      fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+      if(cfg->width > 640 || cfg->height > 480) {
         d->pixelformat = V4L2_PIX_FMT_MJPEG;
-    	} else {
+      } else {
         d->pixelformat = V4L2_PIX_FMT_YUYV;
-    	}
+      }
       d->width = cfg->width;
       d->height = cfg->height;
-    	fmt.fmt.pix.width = cfg->width;
-    	fmt.fmt.pix.height = cfg->height;
-    	fmt.fmt.pix.pixelformat = d->pixelformat;
-    	fmt.fmt.pix.field = V4L2_FIELD_ANY;
-    	
-    	ret = ioctl(d->fd, VIDIOC_S_FMT, &fmt);
-    	if (ret < 0) {
+      fmt.fmt.pix.width = cfg->width;
+      fmt.fmt.pix.height = cfg->height;
+      fmt.fmt.pix.pixelformat = d->pixelformat;
+      fmt.fmt.pix.field = V4L2_FIELD_ANY;
+      
+      ret = ioctl(d->fd, VIDIOC_S_FMT, &fmt);
+      if (ret < 0) {
         driver_failure_posix(d->port, errno);
-    		return 0;
-    	}
-    	
-      fprintf(stderr, "Setting fps %d\r\n", cfg->fps);
-    	
-    	struct v4l2_streamparm parm;
+        return 0;
+      }
+      
+      //fprintf(stderr, "Setting fps %d\r\n", cfg->fps);
+      
+      struct v4l2_streamparm parm;
 
-    	memset(&parm, 0, sizeof parm);
+      memset(&parm, 0, sizeof parm);
       parm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
-    	ret = ioctl(d->fd, VIDIOC_G_PARM, &parm);
-    	if (ret < 0) {
+      ret = ioctl(d->fd, VIDIOC_G_PARM, &parm);
+      if (ret < 0) {
         driver_failure_posix(d->port, errno);
         return 0;
-    	}
-    	parm.parm.capture.timeperframe.numerator = 1;
-    	parm.parm.capture.timeperframe.denominator = cfg->fps;
-    	
-    	ret = ioctl(d->fd, VIDIOC_S_PARM, &parm);
-    	if (ret < 0) {
+      }
+      parm.parm.capture.timeperframe.numerator = 1;
+      parm.parm.capture.timeperframe.denominator = cfg->fps;
+      
+      ret = ioctl(d->fd, VIDIOC_S_PARM, &parm);
+      if (ret < 0) {
         driver_failure_posix(d->port, errno);
         return 0;
-    	}
-    	
+      }
+      
       fprintf(stderr, "Setting quality 100\r\n");
       struct v4l2_jpegcompression jpeg;
       memset(&jpeg, 0, sizeof jpeg);
@@ -194,19 +194,19 @@ static int uvc_drv_command(ErlDrvData handle, unsigned int command, char *buf,
         // return 0;
         fprintf(stderr, "Failed to set quality\r\n");
       }
-    	
-    	
-    	if(video_alloc_buffers(d) < 0) {
+      
+      
+      if(video_alloc_buffers(d) < 0) {
         driver_failure_posix(d->port, errno);
         return 0;
-    	}
-    	
+      }
+      
       int type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    	ret = ioctl(d->fd, VIDIOC_STREAMON, &type);
-    	if(ret < 0) {
+      ret = ioctl(d->fd, VIDIOC_STREAMON, &type);
+      if(ret < 0) {
         driver_failure_posix(d->port, errno);
         return 0;
-    	}
+      }
       
       fprintf(stderr, "Capture started\r\n");
 
@@ -227,81 +227,81 @@ static int uvc_drv_command(ErlDrvData handle, unsigned int command, char *buf,
 
 static int video_queue_buffer(Uvc *dev, int index)
 {
-	struct v4l2_buffer buf;
-	int ret;
+  struct v4l2_buffer buf;
+  int ret;
 
-	memset(&buf, 0, sizeof buf);
-	buf.index = index;
-	buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-	buf.memory = V4L2_MEMORY_MMAP;
-	buf.length = dev->buffers[index].size;
+  memset(&buf, 0, sizeof buf);
+  buf.index = index;
+  buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+  buf.memory = V4L2_MEMORY_MMAP;
+  buf.length = dev->buffers[index].size;
 
-	memset(dev->buffers[buf.index].mem, 0x55, buf.length);
+  memset(dev->buffers[buf.index].mem, 0x55, buf.length);
 
-	ret = ioctl(dev->fd, VIDIOC_QBUF, &buf);
-	if (ret < 0)
-		printf("Unable to queue buffer (%d).\n", errno);
+  ret = ioctl(dev->fd, VIDIOC_QBUF, &buf);
+  if (ret < 0)
+    printf("Unable to queue buffer (%d).\n", errno);
 
-	return ret;
+  return ret;
 }
 
 
 static int video_alloc_buffers(Uvc *dev)
 {
-	struct v4l2_requestbuffers rb;
-	struct v4l2_buffer buf;
-	struct buffer *buffers;
-	unsigned int i;
-	int ret;
+  struct v4l2_requestbuffers rb;
+  struct v4l2_buffer buf;
+  struct buffer *buffers;
+  unsigned int i;
+  int ret;
   int nbufs = V4L_BUFFERS_DEFAULT;
 
-	memset(&rb, 0, sizeof(rb));
-	rb.count = nbufs;
-	rb.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-	rb.memory = V4L2_MEMORY_MMAP;
+  memset(&rb, 0, sizeof(rb));
+  rb.count = nbufs;
+  rb.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+  rb.memory = V4L2_MEMORY_MMAP;
 
-	ret = ioctl(dev->fd, VIDIOC_REQBUFS, &rb);
-	if (ret < 0) {
+  ret = ioctl(dev->fd, VIDIOC_REQBUFS, &rb);
+  if (ret < 0) {
     fprintf(stderr, "Failed request buffer\r\n");
-		return ret;
-	}
-	
-	buffers = malloc(rb.count * sizeof buffers[0]);
-	if (buffers == NULL)
-		return -ENOMEM;
+    return ret;
+  }
+  
+  buffers = malloc(rb.count * sizeof buffers[0]);
+  if (buffers == NULL)
+    return -ENOMEM;
 
-	/* Map the buffers. */
-	for (i = 0; i < rb.count; ++i) {
-		memset(&buf, 0, sizeof buf);
-		buf.index = i;
-		buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-		buf.memory = V4L2_MEMORY_MMAP;
-		ret = ioctl(dev->fd, VIDIOC_QUERYBUF, &buf);
-		if (ret < 0) {
-			fprintf(stderr, "Unable to query buffer %u (%d).\r\n", i, errno);
-			return ret;
-		}
-		//printf("length: %u offset: %u\n", buf.length, buf.m.offset);
+  /* Map the buffers. */
+  for (i = 0; i < rb.count; ++i) {
+    memset(&buf, 0, sizeof buf);
+    buf.index = i;
+    buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    buf.memory = V4L2_MEMORY_MMAP;
+    ret = ioctl(dev->fd, VIDIOC_QUERYBUF, &buf);
+    if (ret < 0) {
+      fprintf(stderr, "Unable to query buffer %u (%d).\r\n", i, errno);
+      return ret;
+    }
+    //printf("length: %u offset: %u\n", buf.length, buf.m.offset);
 
-		buffers[i].mem = mmap(0, buf.length, PROT_READ | PROT_WRITE, MAP_SHARED, dev->fd, buf.m.offset);
-		if (buffers[i].mem == MAP_FAILED) {
-			fprintf(stderr, "Unable to map buffer %u (%d)\r\n", i, errno);
-			return -1;
-		}
-		buffers[i].size = buf.length;
-		//printf("Buffer %u mapped at address %p.\n", i, buffers[i].mem);
-	}
-	dev->buffers = buffers;
-	dev->nbufs = rb.count;
-	
+    buffers[i].mem = mmap(0, buf.length, PROT_READ | PROT_WRITE, MAP_SHARED, dev->fd, buf.m.offset);
+    if (buffers[i].mem == MAP_FAILED) {
+      fprintf(stderr, "Unable to map buffer %u (%d)\r\n", i, errno);
+      return -1;
+    }
+    buffers[i].size = buf.length;
+    //printf("Buffer %u mapped at address %p.\n", i, buffers[i].mem);
+  }
+  dev->buffers = buffers;
+  dev->nbufs = rb.count;
+  
   fprintf(stderr, "Queing buffers\r\n");
-	
+  
   for(i = 0; i < rb.count; i++) {
     ret = video_queue_buffer(dev, i);
     if(ret < 0) return ret;
   }
 
-	return 0;
+  return 0;
 }
 
 uint8_t huffman_table[] = "\xFF\xC4\x01\xA2\x00\x00\x01\x05\x01\x01\x01\x01"\
@@ -382,16 +382,16 @@ static void uvc_drv_input(ErlDrvData handle, ErlDrvEvent io_event)
 {
   Uvc* d = (Uvc*) handle;
   struct v4l2_buffer buf;
-	
+  
   memset(&buf, 0, sizeof buf);
-	buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-	buf.memory = V4L2_MEMORY_MMAP;
-	int ret = ioctl(d->fd, VIDIOC_DQBUF, &buf);
-	if(ret < 0) {
+  buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+  buf.memory = V4L2_MEMORY_MMAP;
+  int ret = ioctl(d->fd, VIDIOC_DQBUF, &buf);
+  if(ret < 0) {
     driver_failure_posix(d->port, errno);
     return;
-	}
-	
+  }
+  
   ErlDrvBinary* bin;
   size_t len;
   if(d->pixelformat == V4L2_PIX_FMT_YUYV) {
@@ -443,18 +443,18 @@ static void uvc_drv_input(ErlDrvData handle, ErlDrvEvent io_event)
 
 
 ErlDrvEntry uvc_driver_entry = {
-    NULL,			/* F_PTR init, N/A */
-    uvc_drv_start,		/* L_PTR start, called when port is opened */
-    uvc_drv_stop,		/* F_PTR stop, called when port is closed */
-    NULL,	                /* F_PTR output, called when erlang has sent */
-    uvc_drv_input,		/* F_PTR ready_input, called when input descriptor ready */
-    NULL,	              /* F_PTR ready_output, called when output descriptor ready */
-    "uvc_drv",		/* char *driver_name, the argument to open_port */
-    NULL,			/* F_PTR finish, called when unloaded */
+    NULL,      /* F_PTR init, N/A */
+    uvc_drv_start,    /* L_PTR start, called when port is opened */
+    uvc_drv_stop,    /* F_PTR stop, called when port is closed */
+    NULL,                  /* F_PTR output, called when erlang has sent */
+    uvc_drv_input,    /* F_PTR ready_input, called when input descriptor ready */
+    NULL,                /* F_PTR ready_output, called when output descriptor ready */
+    "uvc_drv",    /* char *driver_name, the argument to open_port */
+    NULL,      /* F_PTR finish, called when unloaded */
     NULL,     /* void *handle */
-    uvc_drv_command,			/* F_PTR control, port_command callback */
-    NULL,		    	/* F_PTR timeout, reserved */
-    NULL,	                     /* F_PTR outputv, reserved */
+    uvc_drv_command,      /* F_PTR control, port_command callback */
+    NULL,          /* F_PTR timeout, reserved */
+    NULL,                       /* F_PTR outputv, reserved */
     NULL,                      /* ready_async */
     NULL,                             /* flush */
     NULL,                             /* call */
@@ -471,3 +471,4 @@ DRIVER_INIT(uvc_drv) /* must match name in driver_entry */
 {
     return &uvc_driver_entry;
 }
+
