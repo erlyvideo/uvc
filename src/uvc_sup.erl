@@ -22,48 +22,42 @@
 %% ===================================================================
 
 start(_StartType, _StartArgs) ->
-    uvc_sup:start_link().
+  uvc_sup:start_link().
 
 stop(_State) ->
-    ok.
+  ok.
 
 %% ===================================================================
 %% API functions
 %% ===================================================================
 
 start_link() ->
-    supervisor:start_link({local, ?MODULE}, ?MODULE, []).
+  supervisor:start_link({local, ?MODULE}, ?MODULE, []).
+
+
+start_uvc(Config) ->
+  start_uvc(uvc,Config).
 
 start_uvc(Name, Config) ->
   DVBS2 = {
-    {Name, sup},
-    {uvc, start_link ,[Name, Config]},
-    permanent,
-    10000,
+    Name,
+    {uvc, start_link ,[Config]},
+    temporary,
+    100,
     worker,
     [uvc]
   },
-  supervisor:start_child(?MODULE, DVBS2).
+  supervisor:start_child(uvc_capture_sup, DVBS2).
 
-start_uvc(Config) ->
-  supervisor:start_child(uvc_capture_sup, [Config]).
   
 
 
 %% ===================================================================
 %% Supervisor callbacks
 %% ===================================================================
+
 init([uvc]) ->
-  {ok, {{simple_one_for_one, 50, 100}, [
-    {   undefined,                               % Id       = internal id
-    {uvc,start_link,[]},                  % StartFun = {M, F, A}
-    temporary,                               % Restart  = permanent | transient | temporary
-    2000,                                    % Shutdown = brutal_kill | int() >= 0 | infinity
-    worker,                                  % Type     = worker | supervisor
-    []                                       % Modules  = [Module] | dynamic
-    }
-  ]}};
-  
+  {ok, {{one_for_one,5,10}, []}};
 
 init([]) ->
   Supervisors = [
